@@ -1,0 +1,142 @@
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("biomaRt", version = "3.8")
+
+library("biomaRt")
+ensembl <- useMart("ensembl",dataset="hsapiens_gene_ensembl")
+ 
+my_chr <- c(1:22, 'M', 'X', 'Y') # Making an object with chromosome names
+# getBM from Biomart libr, function to convert ensembl gene Ids to entrez gene Ids
+my_ensembl_gene <- getBM(attributes='ensembl_gene_id',
+                    filters = 'chromosome_name',
+                    values = my_chr,
+                    mart = ensembl)
+
+five_ensembl <- my_ensembl_gene[1:5,]
+
+five_ensembl 
+
+five_ensembl_to_entrez <- getBM(attributes=c('ensembl_gene_id', 'entrezgene'), filters = 'ensembl_gene_id', values = five_ensembl, mart = ensembl)
+
+five_ensembl_to_entrez
+
+#out of interest how many entrez gene ids?
+my_entrez_gene <- getBM(attributes='entrezgene',
+                    filters = 'chromosome_name',
+                    values = my_chr,
+                    mart = ensembl)
+ 
+length(my_entrez_gene[,1])
+# Made an object to retrieve the folloving info
+
+my_attribute <- c('entrezgene',
+                  'hgnc_symbol',
+                  'chromosome_name',
+                  'start_position',
+                  'end_position',
+                  'strand')
+ 
+my_entrez_gene_info  <- getBM(attributes=my_attribute,
+                        filters = c('entrezgene', 'chromosome_name'),
+                        values = list(entrezgene=my_entrez_gene$entrezgene, chromosome_name=my_chr),
+                        mart = ensembl)
+
+
+head(my_entrez_gene_info)
+
+#entrez gene id on different chromosome locations
+my_entrez_gene_info[my_entrez_gene_info$entrezgene=='728369',]
+
+
+####################### Generating Heatmaps in R###################################################
+# we need 2 libraries
+
+# Installing library gplots
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("gplots", version = "3.8")
+
+library(gplots)
+# Installing library RColorBrewer
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("RColorBrewer", version = "3.8")
+library(RColorBrewer)
+
+# Read csv file in R
+
+#MyData <- read.csv(file="c:/TheDataIWantToReadIn.csv", header=TRUE, sep=",")
+data <- read.csv(file="c:/Users/Natalia/Desktop/heatmaps_in_r.csv", header=TRUE, sep=",")
+
+# we want to do heat map on these data
+library(gplots)
+library(RColorBrewer)
+# asign the row names to an object called 
+rnames <- data[,1]
+class(data)
+# it is  "data.frame"
+# we have to convert data frame to a matrix
+
+mat_data <- data.matrix(data[,2:ncol(data)]) #select from 2 column to last column
+class(mat_data)
+# "matrix"
+
+rownames(mat_data)<-rnames # we are asiging rownames to the matrix object
+
+# create a color template/palette with function colorRampPallete
+
+my_palette <- colorRampPalette(c("red","green","yellow"))(n=400)# 400 different shades of color
+
+# create a 5*5 inch of image 
+# png or jpeg
+# width and heigh in pixels
+
+png(
+"c:/Users/Natalia/Desktop/sample_picture_1.png",
+width=5*300,
+heigh=5*300,
+res=1200
+piontsize=8
+)
+
+# we have already created empty template
+
+# We will make a heatmap on this picture
+# heatmap.2 is gplots library
+heatmap.2(mat_data, main="Example Plot", notecol="black", margins=c(12,9), col=my_palette,
+ dendograme = "row", Colv="NA")
+
+# we clastered by rows
+
+heatmap.2(mat_data, main="Example Plot", notecol="black", margins=c(12,9), col=my_palette)
+# no clustering
+
+dev.off() # closin off the file running
+
+
+# transpose data to switch rows and columns
+############ Performing clustering on the heat map by 2 functions,
+# dist() and hclust()
+#Ways of clustering to group certain variables based upon the similarities:
+#Kmeans, hierarhical, divisive clustering
+
+distance = dist(mat_data, method = "euclidian") # will find a distance between Euclidian variables
+
+cluster = hclust(distance, method = "ward")# will perform clustering, ward is standart method
+
+# create new heat map
+heatmap.2(mat_data,
+Rowv = as.dendrogram(cluster))
+
+# How to make legend
+# Following code generate a custom legend on the heatmap from gplots
+par(lend = 1)           # square line ends for the color legend
+legend("topright",      # location of the legend on the heatmap plot
+    legend = c("category1", "category2", "category3"), # category labels
+    col = c("gray", "blue", "black"),  # color key
+    lty= 1,             # line style
+    lwd = 10            # line width
+)
+
+# There are different libraries to create heatmaps
+# We also can plot heatmap without library, using R function heatmap
